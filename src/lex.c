@@ -56,7 +56,11 @@ TokenList *scan_stream(FILE *fp) {
             }
 
             if (cc > 0) {
+
+                // Resize and apply null terminator
                 char *w = realloc(cword, cc + 1);
+                w[cc + 1] = '\0';
+
                 if (tl->tok) {
                     if (tl->argv) {
                         tl->argv = realloc(tl->argv, (tl->argc + 1) * sizeof(char*)); // Make space
