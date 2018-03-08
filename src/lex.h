@@ -1,13 +1,63 @@
-#include <stdio.h>
-#include <stdlib.h>
+typedef enum {
+    NONE,
+    ARITHMETIC,
+    PUSH,
+    POP,
+    LABEL,
+    GOTO,
+    IF,
+    FUNCTION,
+    RETURN,
+    CALL,
+} CommandType;
 
+typedef enum {
+    ARGUMENT,
+    LOCAL,
+    STATIC,
+    CONSTANT,
+    THIS,
+    THAT,
+    POINTER,
+    TEMP,
+} Memory;
+
+typedef enum {
+    ARG_NONE,
+    ARG_CMD,
+    ARG_MEMORY,
+    ARG_NUM,
+    ARG_LABEL,
+    ARG_FN,
+} CmdArgType;
+
+typedef enum {
+    ADD,
+    SUB,
+    NEG,
+    EQ,
+    GT,
+    LT,
+    AND,
+    OR,
+    NOT,
+} RType;
+
+typedef union {
+    long num;
+    char *label;
+    Memory mem;
+    RType op;
+} CmdArg;
 
 typedef struct TokenList {
-    char *tok;
+    CommandType cmd;
     int argc;
-    char **argv;
+    CmdArg *argv;
     struct TokenList *next;
 } TokenList;
 
 
+TokenList *new_token_list();
+void free_token_list(TokenList *tl);
 TokenList *scan_stream(FILE *fp);

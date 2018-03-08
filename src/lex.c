@@ -1,13 +1,95 @@
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "lex.h"
 
-#include <ctype.h>
+// TODO: fix naming
+// TODO: bracket spacing
 
-#define BLOCK (1024)
+/**
+ * Conversion tables.
+ *
+ * Convert from string tokens to their enum equivalent.
+ * This makes parsing easier once everything is tokenized.
+ *
+ */
+
+static const struct {
+    char *key;
+    CommandType val;
+} command[] = {
+    {"push", PUSH       },
+    {"pop",  POP        },
+    {"add",  ARITHMETIC },
+    {"sub",  ARITHMETIC },
+    {"neg",  ARITHMETIC },
+    {"eq",   ARITHMETIC },
+    {"gt",   ARITHMETIC },
+    {"lt",   ARITHMETIC },
+    {"and",  ARITHMETIC },
+    {"or",   ARITHMETIC },
+    {"not",  ARITHMETIC },
+};
+
+static const struct {
+    char *key;
+    Memory val;
+} memory[] = {
+    {"argument", ARGUMENT },
+    {"local",    LOCAL    },
+    {"static",   STATIC   },
+    {"constant", CONSTANT },
+    {"this",     THIS     },
+    {"that",     THAT     },
+    {"pointer",  POINTER  },
+    {"temp",     TEMP     },
+};
+
+static const struct {
+    char *key;
+    RType val;
+} arithmetic[] = {
+    {"add", ADD },
+    {"sub", SUB },
+    {"neg", NEG },
+    {"eq",  EQ  },
+    {"gt",  GT  },
+    {"lt",  LT  },
+    {"and", AND },
+    {"or",  OR  },
+    {"not", NOT },
+};
+
+static const struct CommandFormat {
+    int nargs;
+    CmdArgType arg[3];
+} cmd_fmt[] = {
+    [PUSH]       = { 3, { ARG_NONE, ARG_MEMORY, ARG_NUM } },
+    [POP]        = { 3, { ARG_NONE, ARG_MEMORY, ARG_NUM } },
+    [ARITHMETIC] = { 1, { ARG_CMD } },
+};
+
+
+/**
+ * Local function declarations.
+ */
+
+char *nextline(FILE*);
+CommandType cmdtype(char*);
+
 
 TokenList *new_token_list() {
     TokenList *r = malloc(sizeof(TokenList));
 
-    r->tok  = NULL;
+    if (!r) {
+        fprintf(stderr, "Failed to allocate TokenList\n");
+        exit(1);
+    }
+
+    r->cmd = NONE;
     r->argc = 0;
     r->argv = NULL;
     r->next = NULL;
@@ -15,84 +97,245 @@ TokenList *new_token_list() {
     return r;
 }
 
+void free_token_list(TokenList *tl) {
+    TokenList *n;
+
+    if (tl) {
+        n = tl->next;
+        free(tl);
+
+        if (n)
+            free_token_list(n);
+    }
+}
+
+// TODO: Rewrite to accomodate better newer operations and arithmetic
 TokenList *scan_stream(FILE *fp) {
-    TokenList *r = new_token_list();
 
+    TokenList *r = NULL;
+    TokenList *curr = NULL;
     TokenList *prev = NULL;
-    TokenList *tl = r;
 
-    int cc = 0;
-    int cws = 16;
-    char *cword = malloc(16 * sizeof(char));
+    CommandType cmdt;
+    struct CommandFormat fmt;
 
-    int c;
-    while ((c = fgetc(fp)) != EOF) {
+    int argc = 0;
+    CmdArg *argv = NULL;
 
-        // Remove comments
-        if (c == '/') {
-            if ((c = fgetc(fp)) == '/') {
-                // Skip to end of line
-                while (fgetc(fp) != '\n')
-                    ; // nop
+    char *tokdelim = " \t";
+    int failure = 0;
 
-                ungetc('\n', fp);
-                continue;
-            }
-        }
+    char *line, *cmd, *nword;
+    while ((line = nextline(fp))) {
 
-        if (isspace(c)) {
+        cmd = strtok(line, tokdelim); // FIXME?: null return
+        cmdt = cmdtype(cmd);
 
-            if (c == '\n') {
-                if (!tl || !(tl->tok)) {
-                    continue;
-
-                } else {
-                    if (prev) {
-                        prev->next = tl;
-                    }
-                    prev = tl;
-                    tl = NULL;
-                }
-            }
-
-            if (cc > 0) {
-
-                // Resize and apply null terminator
-                char *w = realloc(cword, cc + 1);
-                w[cc + 1] = '\0';
-
-                if (tl->tok) {
-                    if (tl->argv) {
-                        tl->argv = realloc(tl->argv, (tl->argc + 1) * sizeof(char*)); // Make space
-                    } else {
-                        tl->argv = malloc((tl->argc + 1) * sizeof(char*));
-                    }
-
-                    tl->argv[tl->argc] = w;
-                    tl->argc++;
-
-                } else {
-                    tl->tok = w;
-                }
-
-                cc = 0;
-                cword = malloc(16 * sizeof(char));
-                cws = 16;
-            }
-
+        if (cmdt == NONE) {
+            fprintf(stderr, "Unknown command '%s'\n", cmd);
             continue;
         }
 
-        if (!tl) {
-            tl = new_token_list();
+        int argn;
+        fmt = cmd_fmt[cmdt];
+
+        if (fmt.arg[0] == ARG_NONE) {
+
+            argn = 0;
+            argc = fmt.nargs - 1;
+            argv = malloc(argc * sizeof(CmdArg));
+
+        } else {
+
+            argn = 1;
+            argc = fmt.nargs;
+            argv = malloc(argc * sizeof(CmdArg));
+
+            switch (fmt.arg[0]) {
+                int s, j;
+
+                case ARG_CMD:
+
+                    s = sizeof(arithmetic) / sizeof(arithmetic[0]);
+                    for (j = 0; j < s; ++j) {
+                        if (strcmp(cmd, arithmetic[j].key) == 0) {
+                            argv[0].op = arithmetic[j].val;
+                            break;
+                        }
+                    }
+
+                    break;
+
+                default:
+                    /* nop */
+                    break;
+            }
         }
 
-        if (cc >= cws) {
-            cws += 16;
-            cword = realloc(cword, cws);
+        for (int i = 1; i < fmt.nargs; ++i, ++argn) {
+            nword = strtok(NULL, tokdelim);
+
+            if (!nword) {
+                fprintf(stderr,
+                        "Missing token at line '%s'\n", line);
+                failure = 1;
+                continue;
+            }
+
+            switch (fmt.arg[i]) {
+                int s;
+                int found;
+                int j;
+
+                char *end;
+                long num;
+
+
+                case ARG_MEMORY:
+                    s = sizeof(memory) / sizeof(memory[0]);
+                    found = 0;
+                    for (j = 0; j < s; ++j) {
+                        if (strcmp(nword, memory[j].key) == 0) {
+                            argv[argn].mem = memory[j].val;
+                            found = 1;
+                            break;
+                        }
+                    }
+
+                    // If no matching memory segment is found
+                    if (!found) {
+                        fprintf(stderr, "Invalid memory segment '%s'\n", nword);
+                    }
+
+                    break;
+
+                case ARG_NUM:
+                    num = strtoll(nword, &end, 10);
+                    if (errno == ERANGE || end == nword) {
+                        fprintf(stderr,
+                                "Failed to read number '%s' in line '%s'", nword, line);
+                        failure = 1;
+                    }
+
+                    argv[argn].num = num;
+                    break;
+
+                default:
+                    /* nop */
+                    break;
+            }
         }
 
-        cword[cc++] = c;
+        if (!failure) {
+            curr = new_token_list();
+            curr->cmd  = cmdt;
+            curr->argc = argc;
+            curr->argv = argv;
+
+            if (prev)
+                prev->next = curr;
+
+            prev = curr;
+
+            if (!r)
+                r = prev;
+        }
+
+        free(line);
+    }
+
+    if (failure) {
+        fprintf(stderr,
+                "Failed to compile\n");
+        exit(1);
+    }
+
+    return r;
+}
+
+
+char *nextline(FILE *fp) {
+
+    // Return value and size
+    int rs = 0;
+    char *r = NULL;
+
+    // For reallocation
+    char *new = NULL;
+
+    int c;
+    int i = 0;
+
+    if (feof(fp))
+        return NULL;
+
+    // Remove leading whitespace
+    while (isspace(c = fgetc(fp)))
+        ; /* NOP */
+    ungetc(c, fp);
+
+    while ((c = fgetc(fp)) != EOF) {
+
+        if (c == '\n')
+            break;
+
+        // Check for comments
+        if (c == '/') {
+
+            int n;
+            if ((n = fgetc(fp)) == '/') {
+
+                while(fgetc(fp) != '\n')
+                    ; /* NOP */
+
+                break;
+
+            } else {
+                ungetc(n, fp);
+            }
+        }
+
+        // Reallocate if necessary
+        if (rs <= i + 1) {
+            rs += 16;
+
+            if (r)
+                new = realloc(r, rs);
+            else
+                new = malloc(rs * sizeof(char));
+
+            if (new) {
+                r = new;
+            } else {
+                fprintf(stderr, "Failed to allocate memory\n");
+                exit(1);
+            }
+        }
+
+        r[i++] = c;
+    }
+
+    if (r) {
+        r[i] = '\0';
+        r = realloc(r, i + 1);
+
+        return r;
+
+    } else {
+        return nextline(fp);
+    }
+}
+
+
+CommandType cmdtype(char* cmd) {
+    CommandType r = NONE;
+
+    int s = sizeof(command) / sizeof(command[0]);
+    int i;
+    for (i = 0; i < s; ++i) {
+        if (strcmp(cmd, command[i].key) == 0) {
+            r = command[i].val;
+        }
     }
 
     return r;
