@@ -2,34 +2,29 @@
 #include <stdlib.h>
 
 #include "lex.h"
+#include "write.h"
 
 
 int main(int argc, char **argv) {
 
+    FILE *fi;
+    TokenList *tl;
+
     if (argc < 2) {
-        puts("Insufficient arguments");
+        fprintf(stderr, "Insufficient arguments");
         exit(1);
     }
 
-
-    FILE *fp = fopen(argv[1], "r");
-
-    if (!fp) {
-        printf("Failed to read file %s", argv[1]);
+    fi = fopen(argv[1], "r");
+    if (!fi) {
+        fprintf(stderr, "Failed to read file %s", argv[1]);
         exit(1);
     }
 
-    TokenList *tl = scan_stream(fp);
+    tl = scan_stream(fi);
+    fclose(fi);
 
-    for (TokenList *it = tl ; it; it = it->next) {
-        printf("%s", it->tok);
-
-        for (int i = 0; i < it->argc; ++i) {
-            printf(" %s", it->argv[i]);
-        }
-
-        puts("");
-    }
+    write_token_list(stdout, tl);
 
     return 0;
 }

@@ -1,16 +1,22 @@
 .POSIX:
 
 CC	= cc
-CFLAGS	= -Wall -Wpedantic -std=c99
-OBJ	= src/main.o src/lex.o
+CFLAGS	= -Wall -Wpedantic -std=c99 -g -O2
+LDFLAGS =
+OBJ	= src/main.o src/lex.o src/write.o
+BIN	= jackvmc
 
 
-.PHONY:	all clean
+.PHONY:	all clean test
 
-all: vmtrans
 
-vmtrans: $(OBJ)
+all: $(BIN)
+
+$(BIN): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ)
+
+clean:
+	-rm $(OBJ)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
