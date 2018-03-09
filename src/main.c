@@ -11,13 +11,13 @@ int main(int argc, char **argv) {
     TokenList *tl;
 
     if (argc < 2) {
-        fprintf(stderr, "Insufficient arguments");
+        fprintf(stderr, "Insufficient arguments\n");
         exit(1);
     }
 
     fi = fopen(argv[1], "r");
     if (!fi) {
-        fprintf(stderr, "Failed to read file %s", argv[1]);
+        fprintf(stderr, "Failed to read file %s\n", argv[1]);
         exit(1);
     }
 

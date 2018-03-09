@@ -1,3 +1,4 @@
 /vmtrans
 *.o
+*.asm
 /jackvmc

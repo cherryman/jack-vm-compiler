@@ -6,9 +6,6 @@
 
 #include "lex.h"
 
-// TODO: fix naming
-// TODO: bracket spacing
-
 /**
  * Conversion tables.
  *
@@ -109,7 +106,6 @@ void free_token_list(TokenList *tl) {
     }
 }
 
-// TODO: Rewrite to accomodate better newer operations and arithmetic
 TokenList *scan_stream(FILE *fp) {
 
     TokenList *r = NULL;
@@ -192,6 +188,7 @@ TokenList *scan_stream(FILE *fp) {
 
 
                 case ARG_MEMORY:
+                    // TODO: Make sure memory isn't CONSTANT on POP
                     s = sizeof(memory) / sizeof(memory[0]);
                     found = 0;
                     for (j = 0; j < s; ++j) {
@@ -210,6 +207,8 @@ TokenList *scan_stream(FILE *fp) {
                     break;
 
                 case ARG_NUM:
+                    // TODO: Change to int, limited to the range 0..32767
+                    // TODO: Check for memory segment limits
                     num = strtoll(nword, &end, 10);
                     if (errno == ERANGE || end == nword) {
                         fprintf(stderr,
