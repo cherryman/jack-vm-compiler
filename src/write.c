@@ -1,5 +1,7 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lex.h"
 #include "prog.h"
@@ -12,9 +14,9 @@
 #define C(str) fputs("// " STR(str\n), fp);
 
 
-static void write_preamble(FILE *fp, const FileList *fl);
+static void write_preamble(FILE *fp, FileList *fl);
 static void write_arithmetic(FILE *fp, RType op);
-static void write_stack(FILE *fp, CommandType cmd, Memory mem, long num);
+static void write_stack(FILE *fp, CommandType cmd, Memory mem, long num, char *fname);
 
 
 void write_file_list(FILE *fp, FileList *fl) {
@@ -29,7 +31,9 @@ void write_file_list(FILE *fp, FileList *fl) {
             switch (inst->cmd) {
                 case PUSH:
                 case POP:
-                    write_stack(fp, inst->cmd, inst->argv[0].mem, inst->argv[1].num);
+                    write_stack(fp,
+                            inst->cmd, inst->argv[0].mem, inst->argv[1].num,
+                            it->name);
                     break;
 
                 case ARITHMETIC:
@@ -46,7 +50,7 @@ void write_file_list(FILE *fp, FileList *fl) {
 }
 
 
-void write_preamble(FILE *fp, const FileList *fl) {
+void write_preamble(FILE *fp, FileList *fl) {
 
     static const struct {
         char *seg;
@@ -60,6 +64,7 @@ void write_preamble(FILE *fp, const FileList *fl) {
     };
 
     C(PREAMBLE BEGIN);
+
     for (int i = 0; i < sizeof(regs)/sizeof(regs[0]); ++i) {
         F(@%d, regs[i].addr);
         P(D=A);
@@ -67,10 +72,6 @@ void write_preamble(FILE *fp, const FileList *fl) {
         P(M=D);
     }
 
-    FileList *it;
-    for (it = fl; it; it = it->next) {
-        break; /* NOP */
-    }
     C(PREAMBLE END);
 }
 
@@ -153,23 +154,36 @@ void write_arithmetic(FILE *fp, RType op) {
     }
 }
 
-void write_stack(FILE *fp, CommandType cmd, Memory mem, long num) {
+void write_stack(FILE *fp, CommandType cmd, Memory mem, long num, char *fname) {
 
-    int deref = 0;
-    char *seg = malloc(4 * sizeof(char));
+    int deref = 0, dofree = 0;
+    char *seg = NULL;
+
     switch (mem) {
         case ARGUMENT: deref = 1; seg = "ARG";  break;
         case LOCAL:    deref = 1; seg = "LCL";  break;
         case THIS:     deref = 1; seg = "THIS"; break;
         case THAT:     deref = 1; seg = "THAT"; break;
-        case TEMP:                sprintf(seg, "R%ld", num + 5); break;
         case POINTER:
             if      (num == 0)    seg = "THIS";
             else if (num == 1)    seg = "THAT";
             break;
 
-        case STATIC:   deref = 1; //sprintf(seg, "%s.%ld", fname, num);
-            // TODO: IMPLEMENT
+        case TEMP:
+            dofree = 1;
+            seg = malloc(sizeof(char) * ((int) floor(log10(num)) + 2));
+
+            sprintf(seg, "R%ld", num + 5);
+            break;
+
+        case STATIC:
+            dofree = 1;
+            seg = malloc(
+                    // Format is fname.num
+                    // strlen for fname, +2 for . and \0, the rest for number length
+                    sizeof(char) * (strlen(fname) + 2 + (int) (floor(log10(num)) + 1)));
+
+            sprintf(seg, "%s.%ld", fname, num);
             break;
 
         case CONSTANT:
@@ -243,5 +257,6 @@ void write_stack(FILE *fp, CommandType cmd, Memory mem, long num) {
             break;
     }
 
-    free(seg);
+    if (dofree)
+        free(seg);
 }

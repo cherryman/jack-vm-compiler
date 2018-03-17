@@ -2,7 +2,7 @@
 
 CC	= cc
 CFLAGS	= -Wall -Wpedantic -std=c99 -g -O2
-LDFLAGS =
+LDFLAGS = -lm
 OBJ	= src/main.o src/lex.o src/write.o src/prog.o
 BIN	= jackvmc
 
@@ -13,7 +13,7 @@ BIN	= jackvmc
 all: $(BIN)
 
 $(BIN): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $(OBJ)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJ)
 
 clean:
 	-rm $(OBJ)

@@ -50,20 +50,28 @@ void add_file(FileList *fl, char *name) {
         fclose(fi);
 
         // Load filename
-        char *new_name = NULL;
+        char *basename = NULL;
         char *ext = NULL;
 
         // Look for extension
-        for (int i = 0; name[i] != '\0'; ++i) {
+        int base = 0;
+        for (int i = 0; name[i] != '\0'; ++i)
+            if (name[i] == '/') // NOTE: Windows path separator unsupported ATM
+                base = i + 1;
+
+        for (int i = base; name[i] != '\0'; ++i) {
             if (name[i] == '.') {
 
+                int len = 0;
+
                 // basename
-                new_name = malloc((i + 1) * sizeof(char));
-                new_name[i] = '\0';
-                strncpy(new_name, name, i);
+                len = i - base;
+                basename = malloc((len + 1) * sizeof(char));
+                basename[len] = '\0';
+                strncpy(basename, &name[base], len);
 
                 // extension
-                int len = strlen(name) - (i + 1);
+                len = strlen(name) - (i + 1);
                 ext = malloc((len + 1) * sizeof(char));
                 ext[len] = '\0';
                 strncpy(ext, &name[i+1], len);
@@ -72,7 +80,8 @@ void add_file(FileList *fl, char *name) {
             }
         }
 
-        if (!new_name || !ext || (strcmp("vm", ext) != 0)) {
+        // TODO: fix extension checking
+        if (!basename || !ext || (strcmp("vm", ext) != 0)) {
             fprintf(stderr,
                     "Invalid filename '%s' provided. Extension must be .vm\n", name);
             exit(1);
@@ -80,7 +89,7 @@ void add_file(FileList *fl, char *name) {
 
         free(ext);
 
-        fl->name = new_name;
+        fl->name = basename;
 
     } else {
         if (fl->next) {
