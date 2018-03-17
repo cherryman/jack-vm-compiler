@@ -70,12 +70,8 @@ static const struct CommandFormat {
 };
 
 
-/**
- * Local function declarations.
- */
-
-char *nextline(FILE*);
-CommandType cmdtype(char*);
+static char *nextline(FILE*);
+static CommandType cmdtype(char*);
 
 
 TokenList *new_token_list() {
@@ -99,6 +95,8 @@ void free_token_list(TokenList *tl) {
 
     if (tl) {
         n = tl->next;
+
+        free(tl->argv);
         free(tl);
 
         if (n)

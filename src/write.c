@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "lex.h"
+#include "prog.h"
 #include "write.h"
 
 #define STR(x) #x
@@ -11,37 +12,41 @@
 #define C(str) fputs("// " STR(str\n), fp);
 
 
-void write_preamble(FILE *fp);
-void write_arithmetic(FILE *fp, RType op);
-void write_stack(FILE *fp, CommandType cmd, Memory mem, long num);
+static void write_preamble(FILE *fp, const FileList *fl);
+static void write_arithmetic(FILE *fp, RType op);
+static void write_stack(FILE *fp, CommandType cmd, Memory mem, long num);
 
 
-void write_token_list(FILE *fp, TokenList *tl) {
+void write_file_list(FILE *fp, FileList *fl) {
 
-    write_preamble(fp);
+    write_preamble(fp, fl); // TODO
 
-    TokenList *it;
-    for (it = tl; it; it = it->next) {
-        switch (it->cmd) {
-            case PUSH:
-            case POP:
-                write_stack(fp, it->cmd, it->argv[0].mem, it->argv[1].num);
-                break;
+    FileList *it;
+    for (it = fl; it; it = it->next) {
 
-            case ARITHMETIC:
-                write_arithmetic(fp, it->argv[0].op);
-                break;
+        TokenList *inst;
+        for (inst = it->tl; inst; inst = inst->next) {
+            switch (inst->cmd) {
+                case PUSH:
+                case POP:
+                    write_stack(fp, inst->cmd, inst->argv[0].mem, inst->argv[1].num);
+                    break;
 
-            default: /* NOP */
-                break;
+                case ARITHMETIC:
+                    write_arithmetic(fp, inst->argv[0].op);
+                    break;
+
+                default: /* NOP */
+                    break;
+            }
         }
     }
 
-    free_token_list(tl);
+    free_file_list(fl);
 }
 
 
-void write_preamble(FILE *fp) {
+void write_preamble(FILE *fp, const FileList *fl) {
 
     static const struct {
         char *seg;
@@ -60,6 +65,11 @@ void write_preamble(FILE *fp) {
         P(D=A);
         F(@%s, regs[i].seg);
         P(M=D);
+    }
+
+    FileList *it;
+    for (it = fl; it; it = it->next) {
+        break; /* NOP */
     }
     C(PREAMBLE END);
 }
@@ -232,4 +242,6 @@ void write_stack(FILE *fp, CommandType cmd, Memory mem, long num) {
         default: /* UNREACHABLE */
             break;
     }
+
+    free(seg);
 }

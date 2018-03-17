@@ -3,7 +3,7 @@
 CC	= cc
 CFLAGS	= -Wall -Wpedantic -std=c99 -g -O2
 LDFLAGS =
-OBJ	= src/main.o src/lex.o src/write.o
+OBJ	= src/main.o src/lex.o src/write.o src/prog.o
 BIN	= jackvmc
 
 
