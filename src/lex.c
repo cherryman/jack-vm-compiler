@@ -18,17 +18,23 @@ static const struct {
     char *key;
     CommandType val;
 } command[] = {
-    {"push", PUSH       },
-    {"pop",  POP        },
-    {"add",  ARITHMETIC },
-    {"sub",  ARITHMETIC },
-    {"neg",  ARITHMETIC },
-    {"eq",   ARITHMETIC },
-    {"gt",   ARITHMETIC },
-    {"lt",   ARITHMETIC },
-    {"and",  ARITHMETIC },
-    {"or",   ARITHMETIC },
-    {"not",  ARITHMETIC },
+    {"push",     PUSH       },
+    {"pop",      POP        },
+    {"label",    LABEL      },
+    {"goto",     GOTO       },
+    {"if-goto",  IF         },
+    {"function", FUNCTION   },
+    {"return",   RETURN     },
+    {"call",     CALL       },
+    {"add",      ARITHMETIC },
+    {"sub",      ARITHMETIC },
+    {"neg",      ARITHMETIC },
+    {"eq",       ARITHMETIC },
+    {"gt",       ARITHMETIC },
+    {"lt",       ARITHMETIC },
+    {"and",      ARITHMETIC },
+    {"or",       ARITHMETIC },
+    {"not",      ARITHMETIC },
 };
 
 static const struct {
@@ -64,9 +70,16 @@ static const struct CommandFormat {
     int nargs;
     CmdArgType arg[3];
 } cmd_fmt[] = {
+    [NONE]       = { 0 },
+    [ARITHMETIC] = { 1, { ARG_CMD } },
     [PUSH]       = { 3, { ARG_NONE, ARG_MEMORY, ARG_NUM } },
     [POP]        = { 3, { ARG_NONE, ARG_MEMORY, ARG_NUM } },
-    [ARITHMETIC] = { 1, { ARG_CMD } },
+    [LABEL]      = { 2, { ARG_NONE, ARG_NAME } },
+    [GOTO]       = { 2, { ARG_NONE, ARG_NAME } },
+    [IF]         = { 2, { ARG_NONE, ARG_NAME } },
+    [FUNCTION]   = { 3, { ARG_NONE, ARG_NAME, ARG_NUM } },
+    [CALL]       = { 3, { ARG_NONE, ARG_NAME, ARG_NUM } },
+    [RETURN]     = { 0 },
 };
 
 
@@ -181,9 +194,8 @@ TokenList *scan_stream(FILE *fp) {
                 int found;
                 int j;
 
-                char *end;
+                char *end, *name;
                 long num;
-
 
                 case ARG_MEMORY:
                     // TODO: Make sure memory isn't CONSTANT on POP
@@ -215,6 +227,13 @@ TokenList *scan_stream(FILE *fp) {
                     }
 
                     argv[argn].num = num;
+                    break;
+
+                case ARG_NAME:
+                    name = malloc(strlen(nword) * sizeof(char));
+                    strcpy(name, nword);
+
+                    argv[argn].name = name;
                     break;
 
                 default:

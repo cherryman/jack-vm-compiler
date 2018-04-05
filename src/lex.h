@@ -27,8 +27,7 @@ typedef enum {
     ARG_CMD,
     ARG_MEMORY,
     ARG_NUM,
-    ARG_LABEL,
-    ARG_FN,
+    ARG_NAME,
 } CmdArgType;
 
 typedef enum {
@@ -45,7 +44,7 @@ typedef enum {
 
 typedef union {
     long num;
-    char *label;
+    char *name;
     Memory mem;
     RType op;
 } CmdArg;

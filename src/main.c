@@ -52,7 +52,8 @@ int main(int argc, char **argv) {
 
                         if (*(a + 1) != '\0') {
                             fprintf(stderr,
-                                    "Long arguments not supported\n");
+                                    "Error on option '%s': Long arguments not supported\n",
+                                    argv[i]);
                             a = NULL;
 
                         } else {
@@ -87,6 +88,7 @@ int main(int argc, char **argv) {
             fprintf(stderr,
                     "Failed to open file '%s' for reading\n",
                     fname);
+            exit(1);
         }
 
     } else {

@@ -3,7 +3,9 @@
 CC	= cc
 CFLAGS	= -Wall -Wpedantic -std=c99 -g -O2
 LDFLAGS = -lm
-OBJ	= src/main.o src/lex.o src/write.o src/prog.o
+
+SRC	= src/main.c src/lex.c src/write.c src/prog.c
+OBJ	= $(SRC:.c=.o)
 BIN	= jackvmc
 
 
