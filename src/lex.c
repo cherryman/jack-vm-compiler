@@ -198,7 +198,6 @@ TokenList *scan_stream(FILE *fp) {
                 long num;
 
                 case ARG_MEMORY:
-                    // TODO: Make sure memory isn't CONSTANT on POP
                     s = sizeof(memory) / sizeof(memory[0]);
                     found = 0;
                     for (j = 0; j < s; ++j) {
@@ -209,24 +208,50 @@ TokenList *scan_stream(FILE *fp) {
                         }
                     }
 
+                    if (cmdt == POP && argv[argn].mem == CONSTANT) {
+                        fprintf(stderr, "Cannot call POP on constant segment\n");
+                        failure = 1;
+                    }
+
                     // If no matching memory segment is found
                     if (!found) {
                         fprintf(stderr, "Invalid memory segment '%s'\n", nword);
+                        failure = 1;
                     }
 
                     break;
 
                 case ARG_NUM:
-                    // TODO: Change to int, limited to the range 0..32767
-                    // TODO: Check for memory segment limits
                     num = strtoll(nword, &end, 10);
                     if (errno == ERANGE || end == nword) {
-                        fprintf(stderr,
-                                "Failed to read number '%s' in line '%s'", nword, line);
+                        fprintf(stderr, "Failed to read number '%s' in line '%s'", nword, line);
                         failure = 1;
                     }
 
-                    argv[argn].num = num;
+                    // If command type is POP or PUSH,
+                    // check memory segment limits
+                    int num_is_invalid = 0;
+                    if (cmdt & (POP | PUSH)) {
+                        switch(argv[argn-1].mem) {
+                            case TEMP:
+                                if (num < 0 || num > 7) {
+                                    fprintf(stderr, "Temporary segment %ld is not between 0 and 7\n", num);
+                                    num_is_invalid = 1;
+                                }
+                                break;
+
+                            default:
+                                if (num < 0 || num > 32767) {
+                                    fprintf(stderr, "Constant segment %ld is not between 0 and 32767\n", num);
+                                    num_is_invalid = 1;
+                                }
+                                break;
+                        }
+                    }
+
+                    failure |= num_is_invalid; // if (num_is_invalid) failure = true;
+
+                    argv[argn].num = (int) num;
                     break;
 
                 case ARG_NAME:

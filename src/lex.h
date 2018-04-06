@@ -43,7 +43,7 @@ typedef enum {
 } RType;
 
 typedef union {
-    long num;
+    int num;
     char *name;
     Memory mem;
     RType op;

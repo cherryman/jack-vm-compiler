@@ -26,7 +26,7 @@ const static int reg_save_list_len = 4;
 
 static void write_preamble(FILE *fp, FileList *fl);
 static void write_arithmetic(FILE *fp, RType op);
-static void write_stack(FILE *fp, CommandType cmd, Memory mem, long num, char *fname);
+static void write_stack(FILE *fp, CommandType cmd, Memory mem, int num, char *fname);
 static void write_label(FILE *fp, char *label);
 static void write_goto(FILE *fp, CommandType cmd, char *label);
 static void write_fn(FILE *fp, char *name, int varc);
@@ -39,7 +39,7 @@ void write_file_list(FILE *fp, FileList *fl) {
     char *curr_fn = NULL;
     char *label = NULL;
 
-    write_preamble(fp, fl); // TODO
+    write_preamble(fp, fl);
 
     FileList *it;
     for (it = fl; it; it = it->next) {
@@ -220,7 +220,7 @@ void write_arithmetic(FILE *fp, RType op) {
     }
 }
 
-void write_stack(FILE *fp, CommandType cmd, Memory mem, long num, char *fname) {
+void write_stack(FILE *fp, CommandType cmd, Memory mem, int num, char *fname) {
 
     int deref = 0, dofree = 0;
     char *seg = NULL;
@@ -248,9 +248,9 @@ void write_stack(FILE *fp, CommandType cmd, Memory mem, long num, char *fname) {
             seg = malloc(sizeof(char) * len);
 
             if (mem == STATIC)
-                sprintf(seg, "%s.%ld", fname, num);
+                sprintf(seg, "%s.%d", fname, num);
             else if (mem == TEMP)
-                sprintf(seg, "R%ld", num + 5);
+                sprintf(seg, "R%d", num + 5);
 
             break;
 
@@ -265,7 +265,7 @@ void write_stack(FILE *fp, CommandType cmd, Memory mem, long num, char *fname) {
             C(PUSH);
             // Load num
             if (deref || mem == CONSTANT) {
-                PF(@%ld, num);
+                PF(@%d, num);
                 P(D=A);
             }
 
@@ -291,7 +291,7 @@ void write_stack(FILE *fp, CommandType cmd, Memory mem, long num, char *fname) {
             C(POP);
             // Store ptr for later use
             if (deref) {
-                PF(@%ld, num);
+                PF(@%d, num);
                 P(D=A);
                 PF(@%s, seg);
                 P(D=M+D);

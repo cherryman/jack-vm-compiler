@@ -82,8 +82,17 @@ int main(int argc, char **argv) {
     }
 
     if (fname) {
-        fo = fopen(fname, "w"); // TODO: check if file exists
+        // Make sure file doesn't exist
+        fo = fopen(fname, "r");
+        if (fo) {
+            fprintf(stderr,
+                    "File '%s' already exists. Not overriding\n",
+                    fname);
+            exit(1);
+        }
+        fclose(fo);
 
+        fo = fopen(fname, "w");
         if (!fo) {
             fprintf(stderr,
                     "Failed to open file '%s' for reading\n",
@@ -96,7 +105,6 @@ int main(int argc, char **argv) {
     }
 
     write_file_list(fo, fl);
-
     fclose(fo);
 
     return 0;

@@ -37,18 +37,6 @@ void add_file(FileList *fl, char *name) {
     // Check if this is the last item
     if (!fl->next && !fl->name) {
 
-        // Load token list
-        FILE *fi = fopen(name, "r");
-
-        if (!fi) {
-            fprintf(stderr, "Failed to load file '%s'\n", name);
-            exit(1);
-        }
-
-        fl->tl = scan_stream(fi);
-
-        fclose(fi);
-
         // Load filename
         char *basename = NULL;
         char *ext = NULL;
@@ -80,7 +68,6 @@ void add_file(FileList *fl, char *name) {
             }
         }
 
-        // TODO: fix extension checking
         if (!basename || !ext || (strcmp("vm", ext) != 0)) {
             fprintf(stderr,
                     "Invalid filename '%s' provided. Extension must be .vm\n", name);
@@ -88,8 +75,20 @@ void add_file(FileList *fl, char *name) {
         }
 
         free(ext);
-
         fl->name = basename;
+
+        // Read the file
+        // Load token list
+        FILE *fi = fopen(name, "r");
+
+        if (!fi) {
+            fprintf(stderr, "Failed to load file '%s'\n", name);
+            exit(1);
+        }
+
+        fl->tl = scan_stream(fi);
+
+        fclose(fi);
 
     } else {
         if (fl->next) {
